@@ -1,5 +1,5 @@
 # Iosevka Heiskr — custom build (single Semi-Expanded width)
-# The Semi-Expanded advance (548 font units, 112.5% of Iosevka's Normal) is the
+# The Semi-Expanded advance (548 font units, 109.6% of Iosevka's Normal) is the
 # one true width here. It occupies the Normal width slot (menu 5, css "normal")
 # so the family name stays plain "Iosevka Heiskr" with no width suffix, and no
 # app config change is needed. The OS/2 usWidthClass therefore reports
