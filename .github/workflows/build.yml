@@ -1,0 +1,168 @@
+name: Build fonts
+
+on:
+  schedule:
+    # Weekly. Avoids minute 0, which GitHub warns is the most congested slot.
+    - cron: "20 14 * * 2"
+  workflow_dispatch:
+    inputs:
+      force:
+        description: "Rebuild even if the latest upstream release was already built"
+        type: boolean
+        default: false
+  push:
+    branches: [main]
+    paths:
+      - private-build-plans.toml
+      - .github/workflows/build.yml
+      - .github/scripts/check_upstream.py
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-fonts
+  cancel-in-progress: false
+
+jobs:
+  check:
+    name: Check upstream
+    runs-on: ubuntu-latest
+    outputs:
+      upstream: ${{ steps.check.outputs.upstream }}
+      tag: ${{ steps.check.outputs.tag }}
+      sha: ${{ steps.check.outputs.sha }}
+      version: ${{ steps.check.outputs.version }}
+      plans: ${{ steps.check.outputs.plans }}
+      build: ${{ steps.check.outputs.build }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Check upstream
+        id: check
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          FORCE: ${{ inputs.force }}
+        run: python3 .github/scripts/check_upstream.py
+
+  build:
+    name: Build ${{ matrix.plan }}
+    needs: check
+    if: needs.check.outputs.build == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        plan: ${{ fromJSON(needs.check.outputs.plans) }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          path: config
+
+      - uses: actions/checkout@v7
+        with:
+          repository: ${{ needs.check.outputs.upstream }}
+          ref: ${{ needs.check.outputs.sha }}
+          path: iosevka
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: lts/*
+          cache: npm
+          cache-dependency-path: iosevka/package-lock.json
+
+      - name: Install ttfautohint
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends ttfautohint
+
+      - name: Apply build plan
+        run: cp config/private-build-plans.toml iosevka/private-build-plans.toml
+
+      - name: Install dependencies
+        working-directory: iosevka
+        run: npm ci
+
+      - name: Build
+        working-directory: iosevka
+        env:
+          PLAN: ${{ matrix.plan }}
+        # --jCmd=2 matches the 2-CPU private runner. Iosevka peaks above 1 GB
+        # per concurrent job, so this keeps us clear of the 8 GB ceiling.
+        run: npm run build -- "ttf::$PLAN" --jCmd=2
+
+      - name: Package
+        env:
+          PLAN: ${{ matrix.plan }}
+          VERSION: ${{ needs.check.outputs.version }}
+        run: |
+          set -euo pipefail
+          dir="iosevka/dist/$PLAN/TTF"
+          count=$(find "$dir" -name '*.ttf' | wc -l | tr -d ' ')
+          if [ "$count" -eq 0 ]; then
+            echo "::error::no TTFs produced in $dir"
+            exit 1
+          fi
+          zip -j "$PLAN-$VERSION.zip" "$dir"/*.ttf
+          zip -T "$PLAN-$VERSION.zip"
+          echo "- \`$PLAN\`: $count TTFs" >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: font-${{ matrix.plan }}
+          path: ${{ matrix.plan }}-*.zip
+          if-no-files-found: error
+
+  release:
+    name: Release
+    needs: [check, build]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: font-*
+          merge-multiple: true
+          path: assets
+
+      - name: Verify assets
+        env:
+          PLANS: ${{ needs.check.outputs.plans }}
+        run: |
+          set -euo pipefail
+          expected=$(printf '%s' "$PLANS" | python3 -c 'import json,sys; print(len(json.load(sys.stdin)))')
+          actual=$(find assets -name '*.zip' | wc -l | tr -d ' ')
+          if [ "$actual" -ne "$expected" ]; then
+            echo "::error::expected $expected zips, found $actual"
+            exit 1
+          fi
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ needs.check.outputs.tag }}
+          UPSTREAM: ${{ needs.check.outputs.upstream }}
+          UPSTREAM_SHA: ${{ needs.check.outputs.sha }}
+        run: |
+          set -euo pipefail
+          notes=$(cat <<EOF
+          Built from upstream [Iosevka $TAG](https://github.com/$UPSTREAM/releases/tag/$TAG).
+
+          - Upstream commit: \`$UPSTREAM_SHA\`
+          - Build plan: \`private-build-plans.toml\` @ \`${GITHUB_SHA:0:7}\`
+
+          Install with \`./install.sh\`.
+          EOF
+          )
+          # Update in place rather than delete + recreate: deleting first leaves a
+          # window with no good release, and repos with immutable releases enabled
+          # cannot reuse a deleted tag name.
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" assets/*.zip --clobber
+            gh release edit "$TAG" --notes "$notes"
+          else
+            gh release create "$TAG" assets/*.zip \
+              --title "Iosevka Heiskr $TAG" \
+              --notes "$notes"
+          fi

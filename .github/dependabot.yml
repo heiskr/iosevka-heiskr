@@ -1,0 +1,15 @@
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    # One PR for all action bumps. This repo has four actions and they tend to
+    # release majors together, so separate PRs would just be noise.
+    groups:
+      actions:
+        patterns:
+          - "*"
+    commit-message:
+      prefix: ci
