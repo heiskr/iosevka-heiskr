@@ -1,4 +1,4 @@
-# iosevka-heiskr
+# Iosevka Heiskr
 
 > [!NOTE]
 > GitHub Copilot created this repository, with review from @heiskr. The font customization choices are human.
