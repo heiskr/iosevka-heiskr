@@ -5,6 +5,8 @@
 
 My custom [Iosevka](https://github.com/be5invis/Iosevka) build, rebuilt automatically whenever upstream ships a new release.
 
+Download under [releases](https://github.com/heiskr/iosevka-heiskr/releases).
+
 ## What gets built
 
 `private-build-plans.toml` defines two families, both humanist, single-storey, serifless, at a single Semi-Expanded (548 unit) width:
