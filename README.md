@@ -41,3 +41,7 @@ Downloads the latest release and copies the TTFs into `~/Library/Fonts`. Same en
 Edit `private-build-plans.toml` and push to `main`. That triggers a rebuild and republishes the release for the current upstream version. Then run `./install.sh`.
 
 Variant names like `single-storey-serifless` are listed in upstream's [character variants doc](https://github.com/be5invis/Iosevka/blob/main/doc/character-variants.md). Build plan options are in [`doc/custom-build.md`](https://github.com/be5invis/Iosevka/blob/main/doc/custom-build.md).
+
+---
+
+[License](https://github.com/be5invis/Iosevka/blob/main/LICENSE.md)
