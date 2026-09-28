@@ -3,11 +3,11 @@
 > [!NOTE]
 > GitHub Copilot created this repository, with review from @heiskr. The font customization choices are human.
 
-<img alt="Iosevka Heiskr specimen: all 94 visible ASCII characters, italic lowercase, lookalikes, ligatures, and nine weights in upright and italic" src=".github/preview.svg" />
-
 My custom [Iosevka](https://github.com/be5invis/Iosevka) build, rebuilt automatically whenever upstream ships a new release.
 
 Download under [releases](https://github.com/heiskr/iosevka-heiskr/releases).
+
+<img alt="Iosevka Heiskr specimen: all 94 visible ASCII characters, italic lowercase, lookalikes, ligatures, and nine weights in upright and italic" src=".github/preview.svg" />
 
 ## What gets built
 
