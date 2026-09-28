@@ -3,6 +3,8 @@
 > [!NOTE]
 > GitHub Copilot created this repository, with review from @heiskr. The font customization choices are human.
 
+<img width="333" height="140" alt="sample" src="https://github.com/user-attachments/assets/b4c97c4d-3935-4eed-b13d-04d3c255b25e" />
+
 My custom [Iosevka](https://github.com/be5invis/Iosevka) build, rebuilt automatically whenever upstream ships a new release.
 
 Download under [releases](https://github.com/heiskr/iosevka-heiskr/releases).
